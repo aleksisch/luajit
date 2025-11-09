@@ -288,6 +288,31 @@ static const char *const jit_trlinkname[] = {
   "interpreter", "return", "stitch"
 };
 
+/* local info = jit.util.snappc(tr) */
+LJLIB_CF(jit_util_snappc)
+{
+  int snapno = lj_lib_checkint(L, 2);
+
+  GCtrace *T = jit_checktrace(L);
+  if (snapno < 0 || snapno >= T->nsnap) {
+    lua_pushnil(L);  // Invalid snapshot number
+    return 1;
+  }
+  SnapShot *snap = &T->snap[snapno];
+  SnapEntry *map = &T->snapmap[snap->mapofs];
+  const BCIns *pc = snap_pc(&map[snap->nent]);
+  GCproto *pt = (GCproto *)gcref(T->startpt);
+  if (!pt) {
+    lua_pushnil(L);  // No prototype available
+    return 1;
+  }
+  BCIns *bc_base = proto_bc(pt);
+  int offset = (int)(pc - bc_base);  // Instruction offset
+  // Return as Lua number (instruction offset)
+  lua_pushinteger(L, offset);
+  return 1;
+}
+
 /* local info = jit.util.traceinfo(tr) */
 LJLIB_CF(jit_util_traceinfo)
 {
